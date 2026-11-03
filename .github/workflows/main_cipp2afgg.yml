@@ -1,0 +1,63 @@
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+
+name: Build and deploy container app to Azure Web App - cipp2afgg
+
+on:
+  push:
+    branches:
+      - 'main'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read #This is required for actions/checkout
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io/
+          username: ${{ secrets.AZUREAPPSERVICE_CONTAINERUSERNAME_2E0310660FD1456399244AB99CA07175 }}
+          password: ${{ secrets.AZUREAPPSERVICE_CONTAINERPASSWORD_ACAE1F2B2D15435B8ABEF349CB81E349 }}
+
+      - name: Build and push container image to registry
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ secrets.AZUREAPPSERVICE_CONTAINERUSERNAME_2E0310660FD1456399244AB99CA07175 }}/cyberdrain/cipp:${{ github.sha }}
+          file: ./Dockerfile
+
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write #This is required for requesting the JWT
+      contents: read #This is required for actions/checkout
+
+    needs: build
+    
+    steps:
+      
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1E2C3A0A3FA94853837F9C01FB4DE0D0 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_8DDFAFF0EF9C486DAA7843C61F8B7BB3 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_12D0E7C914CC4BBF80F762C34C8EABF7 }}
+
+      - name: Deploy to Azure Web App
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: 'cipp2afgg'
+          slot-name: 'Production'
+          images: 'ghcr.io/${{ secrets.AZUREAPPSERVICE_CONTAINERUSERNAME_2E0310660FD1456399244AB99CA07175 }}/cyberdrain/cipp:${{ github.sha }}'
+          
